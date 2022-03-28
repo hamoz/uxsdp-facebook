@@ -1,1 +1,1 @@
-Facebook handler for Rapidpro
+Facebook handler for Moeen Rapidpro uxsdp
