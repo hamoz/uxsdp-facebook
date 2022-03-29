@@ -10,8 +10,8 @@ import (
 	"syscall"
 
 	"github.com/gorilla/mux"
-	"github.com/hamoz/uxsdp-facebook/fb/handler"
-	"github.com/hamoz/uxsdp-facebook/rapidpro"
+	"github.com/hamoz/uxsdp-facebook/common"
+	fb "github.com/hamoz/uxsdp-facebook/fb/handler"
 	"github.com/joho/godotenv"
 )
 
@@ -28,8 +28,8 @@ func main() {
 	accessToken := os.Getenv("FB_ACCESS_TOKEN")
 	appSecret := os.Getenv("FB_APP_SECRET")
 	verifyToken := os.Getenv("FB_VERIFY_TOKEN")
-	rapridProExtChannel := &rapidpro.RapidExtChannel{Url: rapidUrl}
-	facebook := handler.New(rapridProExtChannel, verifyToken, appSecret, accessToken)
+	rapridProApi := &common.RapidProApi{Url: rapidUrl}
+	facebook := fb.NewHandler(rapridProApi, verifyToken, appSecret, accessToken)
 	r := mux.NewRouter()
 	rapidRouter := r.PathPrefix("/rp").Subrouter()
 	rapidRouter.Path("/{ChannelType}/{ChannelId}/receive").HandlerFunc(facebook.HandleIncoming)

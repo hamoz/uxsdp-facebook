@@ -1,4 +1,4 @@
-package api
+package fb
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hamoz/uxsdp-facebook/fb/model"
+	fb "github.com/hamoz/uxsdp-facebook/fb/model"
 	"github.com/valyala/fasthttp"
 )
 
@@ -36,18 +36,18 @@ func New(acesssToken string) *FacebookApi {
 // Respond responds to a user in FB messenger. This includes promotional and non-promotional messages sent inside the 24-hour standard messaging window.
 // For example, use this tag to respond if a person asks for a reservation confirmation or an status update.
 func (api *FacebookApi) Respond(ctx context.Context, recipientID, msgText string) error {
-	return api.CallAPI(ctx, model.SendMessageRequest{
+	return api.CallAPI(ctx, fb.SendMessageRequest{
 		MessagingType: messageTypeResponse,
-		RecipientID: model.MessageRecipient{
+		RecipientID: fb.MessageRecipient{
 			ID: recipientID,
 		},
-		Message: model.Message{
+		Message: fb.Message{
 			Text: msgText,
 		},
 	})
 }
 
-func (api *FacebookApi) CallAPI(ctx context.Context, smr model.SendMessageRequest) error {
+func (api *FacebookApi) CallAPI(ctx context.Context, smr fb.SendMessageRequest) error {
 	req := fasthttp.AcquireRequest()
 	defer fasthttp.ReleaseRequest(req)
 
@@ -73,7 +73,7 @@ func (api *FacebookApi) CallAPI(ctx context.Context, smr model.SendMessageReques
 		return fmt.Errorf("do deadline: %w", err)
 	}
 
-	resp := model.APIResponse{}
+	resp := fb.APIResponse{}
 	err = json.Unmarshal(res.Body(), &resp)
 	if err != nil {
 		return fmt.Errorf("unmarshal response: %w", err)
