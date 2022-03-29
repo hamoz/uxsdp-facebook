@@ -1,4 +1,4 @@
-package handler
+package fb
 
 import (
 	"context"
@@ -11,41 +11,41 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/hamoz/uxsdp-facebook/common"
-	"github.com/hamoz/uxsdp-facebook/fb/api"
-	"github.com/hamoz/uxsdp-facebook/fb/model"
-	"github.com/hamoz/uxsdp-facebook/rapidpro"
+	api "github.com/hamoz/uxsdp-facebook/fb/api"
+	model "github.com/hamoz/uxsdp-facebook/fb/model"
 )
+
+var _ common.PlatformHandler = (*facebookHandler)(nil)
 
 var (
 	errUnknownWebHookObject = errors.New("unknown web hook object")
 	errNoMessageEntry       = errors.New("there is no message entry")
 )
 
-type FacebookHandler struct {
+type facebookHandler struct {
 	verifyToken string
 	appSecret   string
 	accessToken string
-	rapidPro    *rapidpro.RapidExtChannel
 	facebookApi *api.FacebookApi
+	rapidproApi *common.RapidProApi
 }
 
-func New(rapidPro *rapidpro.RapidExtChannel, verifyToken, appSecret, accessToken string) *FacebookHandler {
-	return &FacebookHandler{facebookApi: api.New(accessToken), rapidPro: rapidPro, verifyToken: verifyToken, appSecret: appSecret, accessToken: accessToken}
+func NewHandler(rapidproApi *common.RapidProApi, verifyToken, appSecret, accessToken string) common.PlatformHandler {
+	return &facebookHandler{rapidproApi: rapidproApi, facebookApi: api.New(accessToken), verifyToken: verifyToken, appSecret: appSecret, accessToken: accessToken}
 }
 
 // HandleMessenger handles all incoming webhooks from Facebook Messenger.
-func (fb *FacebookHandler) HandleIncoming(w http.ResponseWriter, r *http.Request) {
+func (fb *facebookHandler) HandleIncoming(w http.ResponseWriter, r *http.Request) {
 	log.Println("new request")
 	if r.Method == http.MethodGet {
-		fb.HandleVerification(w, r)
+		fb.handleVerification(w, r)
 		return
 	}
-
-	fb.HandleWebHook(w, r)
+	fb.handleWebHook(w, r)
 }
 
 // HandleVerification handles the verification request from Facebook.
-func (fb *FacebookHandler) HandleVerification(w http.ResponseWriter, r *http.Request) {
+func (fb *facebookHandler) handleVerification(w http.ResponseWriter, r *http.Request) {
 	if fb.verifyToken != r.URL.Query().Get("hub.verify_token") {
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write(nil)
@@ -57,7 +57,7 @@ func (fb *FacebookHandler) HandleVerification(w http.ResponseWriter, r *http.Req
 }
 
 // HandleWebHook handles a webhook incoming from Facebook.
-func (fb *FacebookHandler) HandleWebHook(w http.ResponseWriter, r *http.Request) {
+func (fb *facebookHandler) handleWebHook(w http.ResponseWriter, r *http.Request) {
 	//err := utils.Authorize(r, fb.accessToken)
 	/*if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -97,7 +97,7 @@ func (fb *FacebookHandler) HandleWebHook(w http.ResponseWriter, r *http.Request)
 	w.Write([]byte("EVENT_RECEIVED"))
 }
 
-func (fb *FacebookHandler) handleWebHookRequest(r model.WebHookRequest, channelId string) error {
+func (fb *facebookHandler) handleWebHookRequest(r model.WebHookRequest, channelId string) error {
 	if r.Object != "page" {
 		return errUnknownWebHookObject
 	}
@@ -112,7 +112,7 @@ func (fb *FacebookHandler) handleWebHookRequest(r model.WebHookRequest, channelI
 	return nil
 }
 
-func (fb *FacebookHandler) handleWebHookRequestEntry(we model.WebHookRequestEntry, channelId string) error {
+func (fb *facebookHandler) handleWebHookRequestEntry(we model.WebHookRequestEntry, channelId string) error {
 	if len(we.Messaging) == 0 { // Facebook claims that the arr always contains a single item but we don't trust them :)
 		return errNoMessageEntry
 	}
@@ -121,13 +121,13 @@ func (fb *FacebookHandler) handleWebHookRequestEntry(we model.WebHookRequestEntr
 
 	// message action
 	if em.Message != nil {
+		log.Println(em.Message)
 		log.Printf("text : %s, from : %s, to : %s\n", em.Message.Text, em.Sender.ID, em.Recipient.ID)
 		msg := common.RapidMessage{ID: em.Message.Mid, ChannelId: channelId, ChannelType: "Facebook", Text: em.Message.Text,
 			Sender:    common.User{ID: em.Sender.ID},
 			Recipient: common.User{ID: em.Recipient.ID},
 		}
-		err := fb.rapidPro.CallApi(context.TODO(), msg)
-		//err := ra//fb.handleMessage(em.Sender.ID, em.Message.Text)
+		err := fb.rapidproApi.CallApi(context.TODO(), msg)
 		if err != nil {
 			return fmt.Errorf("handle message: %w", err)
 		}
@@ -136,14 +136,24 @@ func (fb *FacebookHandler) handleWebHookRequestEntry(we model.WebHookRequestEntr
 	return nil
 }
 
-func (fb FacebookHandler) HandleOutgoing(w http.ResponseWriter, r *http.Request) {
+func (fb facebookHandler) HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	//vars := mux.Vars(r)
+	if err := r.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
 	id := r.PostForm.Get("id")
 	from := r.PostForm.Get("from")
 	to := r.PostForm.Get("to")
 	text := r.PostForm.Get("text")
-	log.Printf("id : %s, from : %s, to : %s, text : %s", id, from, to, text)
-	fb.facebookApi.Respond(context.TODO(), to, text)
+	log.Printf(">> id : %s, from : %s, to : %s, text : %s", id, from, to, text)
+	if err := fb.facebookApi.Respond(context.TODO(), to, text); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 /*func (fb *Facebook) handleMessage(recipientID, msgText string) error {

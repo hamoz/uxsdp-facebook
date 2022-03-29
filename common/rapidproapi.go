@@ -1,4 +1,4 @@
-package rapidpro
+package common
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hamoz/uxsdp-facebook/common"
 	"github.com/valyala/fasthttp"
 )
 
@@ -19,12 +18,12 @@ var (
 	client = fasthttp.Client{}
 )
 
-type RapidExtChannel struct {
+type RapidProApi struct {
 	Url  string
 	Auth string
 }
 
-func (rapid *RapidExtChannel) CallApi(ctx context.Context, msg common.RapidMessage) error {
+func (rapid *RapidProApi) CallApi(ctx context.Context, msg RapidMessage) error {
 	req := fasthttp.AcquireRequest()
 	defer fasthttp.ReleaseRequest(req)
 	channelUrl := strings.Replace(rapid.Url, "{ChannelId}", msg.ChannelId, 1)
