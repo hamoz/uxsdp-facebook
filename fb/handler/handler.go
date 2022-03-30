@@ -116,23 +116,24 @@ func (fb *facebookHandler) handleWebHookRequestEntry(we model.WebHookRequestEntr
 	if len(we.Messaging) == 0 { // Facebook claims that the arr always contains a single item but we don't trust them :)
 		return errNoMessageEntry
 	}
-
 	em := we.Messaging[0]
-
-	// message action
-	if em.Message != nil {
-		log.Println(em.Message)
-		log.Printf("text : %s, from : %s, to : %s\n", em.Message.Text, em.Sender.ID, em.Recipient.ID)
-		msg := common.RapidMessage{ID: em.Message.Mid, ChannelId: channelId, ChannelType: "Facebook", Text: em.Message.Text,
-			Sender:    common.User{ID: em.Sender.ID},
-			Recipient: common.User{ID: em.Recipient.ID},
-		}
-		err := fb.rapidproApi.CallApi(context.TODO(), msg)
-		if err != nil {
-			return fmt.Errorf("handle message: %w", err)
-		}
+	msg := common.RapidMessage{ChannelId: channelId, ChannelType: "Facebook",
+		Sender:    common.User{ID: em.Sender.ID},
+		Recipient: common.User{ID: em.Recipient.ID},
 	}
+	// message action
 
+	if em.Message != nil {
+		msg.ID = em.Message.Mid
+		msg.Text = em.Message.Text
+	} else if em.Postback != nil {
+		msg.Text = em.Postback.Payload
+	}
+	log.Printf("text : %s, from : %s, to : %s\n", msg.Text, msg.Sender.ID, msg.Recipient.ID)
+	err := fb.rapidproApi.CallApi(context.TODO(), msg)
+	if err != nil {
+		return fmt.Errorf("handle message: %w", err)
+	}
 	return nil
 }
 
@@ -151,6 +152,7 @@ func (fb facebookHandler) HandleOutgoing(w http.ResponseWriter, r *http.Request)
 	if err := fb.facebookApi.Respond(context.TODO(), to, text); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
+		log.Println(err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusOK)
