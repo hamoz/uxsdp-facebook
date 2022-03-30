@@ -88,6 +88,8 @@ type (
 
 	// Postback struct for postbacks received from Facebook server  as part of WebHookRequest struct.
 	Postback struct {
+		Mid     string `json:"mid"`
+		Title   string `json:"title"`
 		Payload string `json:"payload"`
 	}
 
