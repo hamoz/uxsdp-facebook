@@ -26,13 +26,19 @@ var (
 type facebookHandler struct {
 	verifyToken string
 	appSecret   string
-	accessToken string
+	//accessToken string
 	facebookApi *api.FacebookApi
 	rapidproApi *common.RapidProApi
 }
 
 func NewHandler(rapidproApi *common.RapidProApi, verifyToken, appSecret, accessToken string) common.PlatformHandler {
-	return &facebookHandler{rapidproApi: rapidproApi, facebookApi: api.New(accessToken), verifyToken: verifyToken, appSecret: appSecret, accessToken: accessToken}
+	return &facebookHandler{
+		rapidproApi: rapidproApi,
+		facebookApi: api.New(accessToken),
+		verifyToken: verifyToken,
+		appSecret:   appSecret,
+		//accessToken: accessToken,
+	}
 }
 
 // HandleMessenger handles all incoming webhooks from Facebook Messenger.
@@ -171,8 +177,9 @@ func (fb facebookHandler) HandleOutgoing(w http.ResponseWriter, r *http.Request)
 	from := r.PostForm.Get("from")
 	to := r.PostForm.Get("to")
 	text := r.PostForm.Get("text")
+	accessToken := r.PostForm.Get("access_token")
 	log.Printf(">> id : %s, from : %s, to : %s, text : %s", id, from, to, text)
-	if err := fb.facebookApi.Respond(context.TODO(), to, text); err != nil {
+	if err := fb.facebookApi.Respond(context.TODO(), accessToken, to, text); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		log.Println(err.Error())
