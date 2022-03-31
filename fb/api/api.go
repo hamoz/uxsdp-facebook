@@ -25,18 +25,18 @@ var (
 	client = fasthttp.Client{}
 )
 
-type FacebookApi struct {
-	accessToken string
-}
+type FacebookApi struct{}
 
 func New(acesssToken string) *FacebookApi {
-	return &FacebookApi{accessToken: acesssToken}
+	return &FacebookApi{
+		//accessToken: acesssToken
+	}
 }
 
 // Respond responds to a user in FB messenger. This includes promotional and non-promotional messages sent inside the 24-hour standard messaging window.
 // For example, use this tag to respond if a person asks for a reservation confirmation or an status update.
-func (api *FacebookApi) Respond(ctx context.Context, recipientID, msgText string) error {
-	return api.CallAPI(ctx, fb.SendMessageRequest{
+func (api *FacebookApi) Respond(ctx context.Context, accesssToken string, recipientID, msgText string) error {
+	return api.CallAPI(ctx, accesssToken, fb.SendMessageRequest{
 		MessagingType: messageTypeResponse,
 		RecipientID: fb.MessageRecipient{
 			ID: recipientID,
@@ -47,11 +47,11 @@ func (api *FacebookApi) Respond(ctx context.Context, recipientID, msgText string
 	})
 }
 
-func (api *FacebookApi) CallAPI(ctx context.Context, smr fb.SendMessageRequest) error {
+func (api *FacebookApi) CallAPI(ctx context.Context, accessToken string, smr fb.SendMessageRequest) error {
 	req := fasthttp.AcquireRequest()
 	defer fasthttp.ReleaseRequest(req)
 
-	req.SetRequestURI(fmt.Sprintf("%s?access_token=%s", uriSendMessage, api.accessToken))
+	req.SetRequestURI(fmt.Sprintf("%s?access_token=%s", uriSendMessage, accessToken))
 	req.Header.SetMethod(fasthttp.MethodPost)
 	req.Header.Add("Content-Type", "application/json")
 	body, err := json.Marshal(&smr)
