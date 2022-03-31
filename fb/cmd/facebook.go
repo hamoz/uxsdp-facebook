@@ -25,6 +25,7 @@ func main() {
 	if port, err = strconv.ParseInt(os.Getenv("port"), 10, 64); err != nil {
 		port = 8119
 	}
+
 	accessToken := os.Getenv("FB_ACCESS_TOKEN")
 	appSecret := os.Getenv("FB_APP_SECRET")
 	verifyToken := os.Getenv("FB_VERIFY_TOKEN")

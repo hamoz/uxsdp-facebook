@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/hamoz/uxsdp-facebook/common"
@@ -36,7 +37,6 @@ func NewHandler(rapidproApi *common.RapidProApi, verifyToken, appSecret, accessT
 
 // HandleMessenger handles all incoming webhooks from Facebook Messenger.
 func (fb *facebookHandler) HandleIncoming(w http.ResponseWriter, r *http.Request) {
-	log.Println("new request")
 	if r.Method == http.MethodGet {
 		fb.handleVerification(w, r)
 		return
@@ -74,7 +74,7 @@ func (fb *facebookHandler) handleWebHook(w http.ResponseWriter, r *http.Request)
 		log.Println("read webhook body", err)
 		return
 	}
-
+	log.Println("<<" + string(body))
 	wr := model.WebHookRequest{}
 	err = json.Unmarshal(body, &wr)
 	if err != nil {
@@ -122,10 +122,33 @@ func (fb *facebookHandler) handleWebHookRequestEntry(we model.WebHookRequestEntr
 		Recipient: common.User{ID: em.Recipient.ID},
 	}
 	// message action
-
 	if em.Message != nil {
 		msg.ID = em.Message.Mid
-		msg.Text = em.Message.Text
+		if len(em.Message.Attachments) == 0 {
+			msg.Text = em.Message.Text
+		} else {
+			attachment := em.Message.Attachments[0]
+			/*if json, err := json.Marshal(&attachment); err == nil {
+				msg.Text = string(json)
+			} else {
+				log.Println(err.Error())
+			}*/
+			switch attachment.Type {
+			case "location":
+				if coordinates, ok := attachment.Payload["coordinates"].(map[string]interface{}); ok {
+					lat := coordinates["lat"].(float64)
+					long := coordinates["long"].(float64)
+					msg.Text = "#location=" + strconv.FormatFloat(lat, 'f', -1, 32) + "," + strconv.FormatFloat(long, 'f', -1, 32)
+				}
+
+			case "image", "video", "audio", "file":
+				title, _ := attachment.Payload["title"].(string)
+				url, _ := attachment.Payload["url"].(string)
+				msg.Text = "#type=" + attachment.Type + "#title=" + title +
+					"#url=" + url
+			}
+		}
+
 	} else if em.Postback != nil {
 		msg.Text = em.Postback.Payload
 	}
