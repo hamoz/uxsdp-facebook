@@ -179,7 +179,20 @@ func (fb facebookHandler) HandleOutgoing(w http.ResponseWriter, r *http.Request)
 	text := r.PostForm.Get("text")
 	accessToken := r.PostForm.Get("access_token")
 	log.Printf(">> id : %s, from : %s, to : %s, text : %s", id, from, to, text)
-	if err := fb.facebookApi.Respond(context.TODO(), accessToken, to, text); err != nil {
+
+	var err error
+	smr := model.SendMessageRequest{
+		MessagingType: api.MessageTypeResponse,
+		RecipientID:   model.MessageRecipient{ID: to},
+	}
+	var message model.Message
+	if err = json.Unmarshal([]byte(text), &message); err != nil {
+		//normal text message
+		message = map[string]interface{}{"text": text}
+	}
+	smr.Message = message
+	err = fb.facebookApi.CallAPI(context.TODO(), accessToken, smr)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		log.Println(err.Error())
@@ -187,18 +200,3 @@ func (fb facebookHandler) HandleOutgoing(w http.ResponseWriter, r *http.Request)
 	}
 	w.WriteHeader(http.StatusOK)
 }
-
-/*func (fb *Facebook) handleMessage(recipientID, msgText string) error {
-	msgText = strings.TrimSpace(msgText)
-
-	var responseText string
-	switch msgText {
-	case "hello":
-		responseText = "world"
-	// @TODO your custom cases
-	default:
-		responseText = "What can I do for you?"
-	}
-
-	return fb.Respond(context.TODO(), recipientID, responseText)
-}*/

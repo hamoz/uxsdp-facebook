@@ -19,7 +19,7 @@ type (
 	// WebHookRequestEntryMessage is a message from user in the Facebook web hook request.
 	WebHookRequestEntryMessage struct {
 		Timestamp int              `json:"timestamp"`
-		Message   *MessageRx       `json:"message"`
+		Message   *WebHookMessage  `json:"message"`
 		Delivery  *Delivery        `json:"delivery"`
 		Postback  *Postback        `json:"postback"`
 		Recipient MessageRecipient `json:"recipient"`
@@ -36,15 +36,15 @@ type (
 		ID string `json:"id"`
 	}
 
-	// Message struct for text messaged received from facebook server as part of WebHookRequest struct.
-	Message struct {
+	Message map[string]interface{}
+	/*struct {
 		Mid        string      `json:"mid,omitempty"`
 		Seq        int         `json:"seq,omitempty"`
 		Text       string      `json:"text"`
 		Attachment *Attachment `json:"attachment,omitempty"`
-	}
-
-	MessageRx struct {
+	}*/
+	// Message struct for text messaged received from facebook server as part of WebHookRequest struct.
+	WebHookMessage struct {
 		Mid         string `json:"mid,omitempty"`
 		Seq         int    `json:"seq,omitempty"`
 		Text        string `json:"text"`
