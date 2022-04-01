@@ -18,7 +18,7 @@ const (
 
 // https://developers.facebook.com/docs/messenger-platform/send-messages/#messaging_types
 const (
-	messageTypeResponse = "RESPONSE"
+	MessageTypeResponse = "RESPONSE"
 )
 
 var (
@@ -37,13 +37,11 @@ func New(acesssToken string) *FacebookApi {
 // For example, use this tag to respond if a person asks for a reservation confirmation or an status update.
 func (api *FacebookApi) Respond(ctx context.Context, accesssToken string, recipientID, msgText string) error {
 	return api.CallAPI(ctx, accesssToken, fb.SendMessageRequest{
-		MessagingType: messageTypeResponse,
+		MessagingType: MessageTypeResponse,
 		RecipientID: fb.MessageRecipient{
 			ID: recipientID,
 		},
-		Message: fb.Message{
-			Text: msgText,
-		},
+		Message: map[string]interface{}{"text": msgText},
 	})
 }
 
@@ -82,7 +80,7 @@ func (api *FacebookApi) CallAPI(ctx context.Context, accessToken string, smr fb.
 		return fmt.Errorf("response error: %s", resp.Error.Error())
 	}
 	if res.StatusCode() != fasthttp.StatusOK {
-		return fmt.Errorf("unexpected rsponse status %d", res.StatusCode())
+		return fmt.Errorf("unexpected response status %d", res.StatusCode())
 	}
 
 	return nil
