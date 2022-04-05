@@ -4,6 +4,8 @@ go 1.17
 
 require github.com/valyala/fasthttp v1.34.0
 
+require github.com/rs/zerolog v1.26.1 // indirect
+
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/gorilla/mux v1.8.0

@@ -6,9 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/gorilla/mux"
 	"github.com/hamoz/uxsdp-facebook/common"
@@ -43,6 +44,7 @@ func NewHandler(rapidproApi *common.RapidProApi, verifyToken, appSecret, accessT
 
 // HandleMessenger handles all incoming webhooks from Facebook Messenger.
 func (fb *facebookHandler) HandleIncoming(w http.ResponseWriter, r *http.Request) {
+	log.Info().Msg("incoming message")
 	if r.Method == http.MethodGet {
 		fb.handleVerification(w, r)
 		return
@@ -52,6 +54,7 @@ func (fb *facebookHandler) HandleIncoming(w http.ResponseWriter, r *http.Request
 
 // HandleVerification handles the verification request from Facebook.
 func (fb *facebookHandler) handleVerification(w http.ResponseWriter, r *http.Request) {
+	log.Info().Msg("v code = " + fb.verifyToken)
 	if fb.verifyToken != r.URL.Query().Get("hub.verify_token") {
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write(nil)
@@ -77,16 +80,16 @@ func (fb *facebookHandler) handleWebHook(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("bad request"))
-		log.Println("read webhook body", err)
+		log.Err(err)
 		return
 	}
-	log.Println("<<" + string(body))
+	log.Info().Msg("<<" + string(body))
 	wr := model.WebHookRequest{}
 	err = json.Unmarshal(body, &wr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("bad request"))
-		log.Println("unmarshal request", err)
+		log.Err(err)
 		return
 	}
 
@@ -94,7 +97,7 @@ func (fb *facebookHandler) handleWebHook(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("internal"))
-		log.Println("handle webhook request", err)
+		log.Error().Msg("cannot handle webhook request," + err.Error())
 		return
 	}
 
@@ -134,11 +137,6 @@ func (fb *facebookHandler) handleWebHookRequestEntry(we model.WebHookRequestEntr
 			msg.Text = em.Message.Text
 		} else {
 			attachment := em.Message.Attachments[0]
-			/*if json, err := json.Marshal(&attachment); err == nil {
-				msg.Text = string(json)
-			} else {
-				log.Println(err.Error())
-			}*/
 			switch attachment.Type {
 			case "location":
 				if coordinates, ok := attachment.Payload["coordinates"].(map[string]interface{}); ok {
@@ -158,7 +156,7 @@ func (fb *facebookHandler) handleWebHookRequestEntry(we model.WebHookRequestEntr
 	} else if em.Postback != nil {
 		msg.Text = em.Postback.Payload
 	}
-	log.Printf("text : %s, from : %s, to : %s\n", msg.Text, msg.Sender.ID, msg.Recipient.ID)
+	log.Info().Msg(fmt.Sprint("text, from : %s, to : %s\n", msg.Text, msg.Sender.ID, msg.Recipient.ID))
 	err := fb.rapidproApi.CallApi(context.TODO(), msg)
 	if err != nil {
 		return fmt.Errorf("handle message: %w", err)
@@ -178,7 +176,7 @@ func (fb facebookHandler) HandleOutgoing(w http.ResponseWriter, r *http.Request)
 	to := r.PostForm.Get("to")
 	text := r.PostForm.Get("text")
 	accessToken := r.PostForm.Get("access_token")
-	log.Printf(">> id : %s, from : %s, to : %s, text : %s", id, from, to, text)
+	log.Info().Msg(fmt.Sprint(">> id : %s, from : %s, to : %s, text : %s", id, from, to, text))
 
 	var err error
 	smr := model.SendMessageRequest{
@@ -195,7 +193,7 @@ func (fb facebookHandler) HandleOutgoing(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
-		log.Println(err.Error())
+		log.Err(err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
