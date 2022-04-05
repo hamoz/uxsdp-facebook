@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/gorilla/mux"
 	"github.com/hamoz/uxsdp-facebook/common"
@@ -15,14 +16,18 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const (
+	RapidChannelUri = "/c/ex/{ChannelId}/receive"
+)
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Error().Msg("Error loading .env file")
 	}
-	rapidUrl := os.Getenv("RAPID_URL")
+	rapidUrl := os.Getenv("RAPID_URL") + RapidChannelUri
 	var port int64
-	if port, err = strconv.ParseInt(os.Getenv("port"), 10, 64); err != nil {
+	if port, err = strconv.ParseInt(os.Getenv("FB_CHANNEL_PORT"), 10, 64); err != nil {
 		port = 8119
 	}
 
